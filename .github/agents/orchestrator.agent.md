@@ -15,6 +15,9 @@ You are the lead engineering agent for the **dg-form** disc golf form critique a
 | `dg-form AI Integration` | OpenAI GPT-4o Vision client, prompt engineering, critique parsing |
 | `dg-form Frontend` | React 18 + Vite + TypeScript components and API wiring |
 | `dg-form DevOps` | Docker, docker-compose, environment config, Dockerfiles |
+| `dg-form Security` | SAST, SCA, DAST — vulnerability findings with severity ratings and remediation guidance |
+| `dg-form Performance` | Bottleneck analysis, latency/cost/memory recommendations, spec amendments |
+| `dg-form UX` | WCAG 2.2 AA accessibility review, usability findings, spec amendments |
 
 ## Workflow
 
