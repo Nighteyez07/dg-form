@@ -47,7 +47,8 @@ uploads/
 *.mov
 *.webm
 *.3gp
-
+# ── Local test videos ────────────────────────────────────────────────────────
+tests.video/
 # ── IDEs & editors ────────────────────────────────────────────────────────────
 .vscode/
 !.vscode/extensions.json

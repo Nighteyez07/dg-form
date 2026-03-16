@@ -17,10 +17,10 @@ services:
       # temporary data in RAM — nothing is persisted to the host filesystem,
       # which satisfies the no-video-retention requirement.
       # SECURITY: mode=0700 restricts the directory to the owning user
-      # (appuser) only, preventing other processes in the container from
-      # reading video files in flight. size=512m caps RAM usage to prevent
+      # (appuser, uid=999) only, preventing other processes in the container
+      # from reading video files in flight. size=512m caps RAM usage to prevent
       # a runaway upload flood from exhausting container memory.
-      - /tmp/dg-form:mode=0700,size=512m
+      - /tmp/dg-form:mode=0700,uid=999,gid=999,size=512m
     environment:
       # Consumed by the FastAPI application at startup. Values are sourced
       # from a local .env file (see .env.example). Never commit .env.

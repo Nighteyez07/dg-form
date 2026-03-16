@@ -77,7 +77,7 @@ def registry_entry(tmp_path: Path):
 
 async def test_analyze_invalid_uuid(async_client) -> None:
     response = await async_client.post(
-        "/api/analyze",
+        "/analyze",
         json={"upload_id": "not-a-uuid", "trim": {"start_ms": 0, "end_ms": 2000}},
     )
     assert response.status_code == 404
@@ -86,7 +86,7 @@ async def test_analyze_invalid_uuid(async_client) -> None:
 async def test_analyze_upload_not_found(async_client) -> None:
     valid_uuid = str(uuid.uuid4())  # real UUID, but not in the registry
     response = await async_client.post(
-        "/api/analyze",
+        "/analyze",
         json={"upload_id": valid_uuid, "trim": {"start_ms": 0, "end_ms": 2000}},
     )
     assert response.status_code == 404
@@ -96,7 +96,7 @@ async def test_analyze_invalid_trim_range(async_client, registry_entry) -> None:
     upload_id, _ = registry_entry
     # end_ms < start_ms — TrimRange model_validator must reject this with 422.
     response = await async_client.post(
-        "/api/analyze",
+        "/analyze",
         json={"upload_id": upload_id, "trim": {"start_ms": 5000, "end_ms": 1000}},
     )
     assert response.status_code == 422
@@ -116,7 +116,7 @@ async def test_analyze_services_called(async_client, registry_entry) -> None:
         patch("services.openai_client.analyze_frames", return_value=_VALID_CRITIQUE),
     ):
         response = await async_client.post(
-            "/api/analyze",
+            "/analyze",
             json={"upload_id": upload_id, "trim": {"start_ms": 0, "end_ms": 2000}},
         )
 
@@ -136,7 +136,7 @@ async def test_analyze_cleans_up_upload(async_client, registry_entry) -> None:
         patch("services.openai_client.analyze_frames", return_value=_VALID_CRITIQUE),
     ):
         response = await async_client.post(
-            "/api/analyze",
+            "/analyze",
             json={"upload_id": upload_id, "trim": {"start_ms": 0, "end_ms": 2000}},
         )
 
@@ -150,13 +150,13 @@ async def test_analyze_cleans_up_upload(async_client, registry_entry) -> None:
 # ---------------------------------------------------------------------------
 
 async def test_get_clip_invalid_uuid(async_client) -> None:
-    response = await async_client.get("/api/clip/not-a-uuid")
+    response = await async_client.get("/clip/not-a-uuid")
     assert response.status_code == 404
 
 
 async def test_get_clip_not_found(async_client) -> None:
     valid_uuid = str(uuid.uuid4())
-    response = await async_client.get(f"/api/clip/{valid_uuid}")
+    response = await async_client.get(f"/clip/{valid_uuid}")
     assert response.status_code == 404
 
 
@@ -168,7 +168,7 @@ async def test_get_clip_streams_annotated(async_client) -> None:
     annotated_path.write_bytes(b"\x00\x00\x00\x1cftyp" + b"\x00" * 100)
 
     try:
-        response = await async_client.get(f"/api/clip/{clip_id}")
+        response = await async_client.get(f"/clip/{clip_id}")
         assert response.status_code == 200
         assert "video/mp4" in response.headers["content-type"]
     finally:

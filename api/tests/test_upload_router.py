@@ -61,7 +61,7 @@ async def test_upload_valid_mp4(async_client) -> None:
         return_value=_DETECT_RESULT,
     ):
         response = await async_client.post(
-            "/api/upload",
+            "/upload",
             files={"video": ("throw.mp4", _VALID_MP4, "video/mp4")},
         )
 
@@ -76,7 +76,7 @@ async def test_upload_valid_mp4(async_client) -> None:
 
 async def test_upload_invalid_mime(async_client) -> None:
     response = await async_client.post(
-        "/api/upload",
+        "/upload",
         files={"video": ("notes.txt", b"hello world", "text/plain")},
     )
 
@@ -94,7 +94,7 @@ async def test_upload_too_large(async_client) -> None:
 
     with patch("routers.upload._MAX_UPLOAD_BYTES", 100):
         response = await async_client.post(
-            "/api/upload",
+            "/upload",
             files={"video": ("big.mp4", payload, "video/mp4")},
         )
 
@@ -106,7 +106,7 @@ async def test_upload_magic_byte_mismatch(async_client) -> None:
     bad_content = b"\x00" * 200
 
     response = await async_client.post(
-        "/api/upload",
+        "/upload",
         files={"video": ("fake.mp4", bad_content, "video/mp4")},
     )
 
@@ -119,7 +119,7 @@ async def test_upload_valid_webm(async_client) -> None:
         return_value=_DETECT_RESULT,
     ):
         response = await async_client.post(
-            "/api/upload",
+            "/upload",
             files={"video": ("throw.webm", _VALID_WEBM, "video/webm")},
         )
 
@@ -134,7 +134,7 @@ async def test_upload_low_confidence(async_client) -> None:
         return_value=_DETECT_RESULT_LOW_CONF,
     ):
         response = await async_client.post(
-            "/api/upload",
+            "/upload",
             files={"video": ("throw.mp4", _VALID_MP4, "video/mp4")},
         )
 

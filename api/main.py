@@ -52,8 +52,8 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type"],
     )
 
-    app.include_router(upload_router.router, prefix="/api")
-    app.include_router(analyze_router.router, prefix="/api")
+    app.include_router(upload_router.router)
+    app.include_router(analyze_router.router)
 
     @app.get("/health", tags=["ops"])
     async def health() -> dict:

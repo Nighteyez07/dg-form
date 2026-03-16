@@ -30,7 +30,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export async function uploadVideo(file: File): Promise<UploadResponse> {
   const body = new FormData();
-  body.append('file', file);
+  body.append('video', file);
 
   const response = await fetch('/api/upload', {
     method: 'POST',
