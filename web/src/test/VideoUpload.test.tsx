@@ -86,7 +86,7 @@ describe('VideoUpload', () => {
 
   it('calls onUploadComplete on success', async () => {
     const user = userEvent.setup();
-    const onUploadComplete = vi.fn<[UploadResponse, File], void>();
+    const onUploadComplete = vi.fn<(data: UploadResponse, file: File) => void>();
     render(<VideoUpload onUploadComplete={onUploadComplete} />);
 
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');

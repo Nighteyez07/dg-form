@@ -14,7 +14,7 @@ WORKDIR /build
 # available when pip builds any native extensions; they will also be copied
 # into the final stage below.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libgl1-mesa-glx \
+        libgl1 \
         libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -39,8 +39,9 @@ WORKDIR /app
 # Re-install the same system runtime libraries needed by OpenCV/MediaPipe at
 # run time. We only bring in the runtime libs (no -dev headers needed here).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libgl1-mesa-glx \
+        libgl1 \
         libglib2.0-0 \
+        wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the Python packages installed in the builder stage.
@@ -67,4 +68,4 @@ EXPOSE 8000
 # TODO: Add --workers flag tuned to available CPU count before production.
 # TODO: Enable --ssl-keyfile / --ssl-certfile or sit behind a TLS-terminating
 #       reverse proxy before exposing this service publicly.
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
