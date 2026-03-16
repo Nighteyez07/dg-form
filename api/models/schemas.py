@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+_TRIM_MAX_MS: int = 30_000  # 30-second hard cap on trim window
+
 
 class TrimRange(BaseModel):
     start_ms: int = Field(ge=0)
@@ -11,6 +13,10 @@ class TrimRange(BaseModel):
     def _validate_range(self) -> "TrimRange":
         if self.end_ms <= self.start_ms:
             raise ValueError("end_ms must be greater than start_ms")
+        if self.end_ms - self.start_ms > _TRIM_MAX_MS:
+            raise ValueError(
+                f"Trim window must not exceed {_TRIM_MAX_MS // 1000} seconds"
+            )
         return self
 
 
