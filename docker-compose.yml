@@ -25,7 +25,8 @@ services:
       # Consumed by the FastAPI application at startup. Values are sourced
       # from a local .env file (see .env.example). Never commit .env.
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENAI_TIMEOUT_S: ${OPENAI_TIMEOUT_S:-120}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
     healthcheck:
       # The /health endpoint returns {"status": "ok"} and is used by the

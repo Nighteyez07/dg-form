@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgl1 \
         libglib2.0-0 \
         wget \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the Python packages installed in the builder stage.

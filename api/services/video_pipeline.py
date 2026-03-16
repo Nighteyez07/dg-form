@@ -8,7 +8,7 @@ import ffmpeg
 logger = logging.getLogger(__name__)
 
 _FFMPEG_TIMEOUT_S = 120  # max seconds any ffmpeg process may run
-_MAX_FRAMES = 150        # hard cap on extracted frames (~30 s at 200 ms intervals)
+_MAX_FRAMES = 12         # hard cap: 8-12 frames covers all throw phases; more = token waste
 
 
 def clip_video(source: Path, start_ms: int, end_ms: int, output: Path) -> None:
@@ -33,7 +33,7 @@ def clip_video(source: Path, start_ms: int, end_ms: int, output: Path) -> None:
 
 def extract_frames(
     clip_path: Path,
-    target_interval_ms: int = 200,
+    target_interval_ms: int = 500,
 ) -> list[tuple[int, bytes]]:
     """
     Extract representative JPEG frames from *clip_path* at approximately
@@ -101,13 +101,12 @@ def assemble_annotated_clip(
         for _, jpeg_bytes in frames:
             process.stdin.write(jpeg_bytes)
         process.stdin.close()
-        try:
-            process.wait(timeout=_FFMPEG_TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            raise RuntimeError(
-                f"ffmpeg assemble_annotated_clip timed out after {_FFMPEG_TIMEOUT_S}s"
-            )
+        process.wait(timeout=_FFMPEG_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        raise RuntimeError(
+            f"ffmpeg assemble_annotated_clip timed out after {_FFMPEG_TIMEOUT_S}s"
+        )
     except Exception:
         process.kill()
         raise

@@ -122,7 +122,9 @@ def analyze_frames(
         user_content.append(
             {
                 "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                # detail:low forces 85 tokens per image regardless of resolution,
+                # keeping requests well within the gpt-4.1-mini 200k TPM limit.
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}", "detail": "low"},
             }
         )
 
