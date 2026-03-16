@@ -30,9 +30,9 @@ describe('TrimEditor', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Review Throw Segment/i })).toBeInTheDocument();
-    // start_ms 1000 → "1.0s", end_ms 4000 → "4.0s"
-    expect(screen.getByText(/Start: 1\.0s/i)).toBeInTheDocument();
-    expect(screen.getByText(/End: 4\.0s/i)).toBeInTheDocument();
+    // start_ms 1000 → "1.0 seconds", end_ms 4000 → "4.0 seconds"
+    expect(screen.getByText(/Start: 1\.0 seconds/i)).toBeInTheDocument();
+    expect(screen.getByText(/End: 4\.0 seconds/i)).toBeInTheDocument();
   });
 
   it('shows warning banner when low_confidence is true', () => {
@@ -93,6 +93,8 @@ describe('TrimEditor', () => {
       />
     );
 
+    await user.selectOptions(screen.getByLabelText(/throw type/i), 'backhand');
+    await user.selectOptions(screen.getByLabelText(/camera perspective/i), 'side_facing');
     await user.click(screen.getByRole('button', { name: /analyze throw/i }));
 
     await waitFor(() => {
@@ -119,6 +121,8 @@ describe('TrimEditor', () => {
       />
     );
 
+    await user.selectOptions(screen.getByLabelText(/throw type/i), 'backhand');
+    await user.selectOptions(screen.getByLabelText(/camera perspective/i), 'side_facing');
     await user.click(screen.getByRole('button', { name: /analyze throw/i }));
 
     const alert = await screen.findByRole('alert');

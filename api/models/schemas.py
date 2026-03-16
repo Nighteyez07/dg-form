@@ -1,8 +1,22 @@
-from typing import Literal
+from enum import Enum
 
 from pydantic import BaseModel, Field, model_validator
 
 _TRIM_MAX_MS: int = 30_000  # 30-second hard cap on trim window
+
+
+class ThrowType(str, Enum):
+    backhand = "backhand"
+    forehand = "forehand"
+    unknown = "unknown"
+
+
+class CameraPerspective(str, Enum):
+    front = "front"
+    back = "back"
+    side_facing = "side_facing"
+    side_away = "side_away"
+    unknown = "unknown"
 
 
 class TrimRange(BaseModel):
@@ -33,8 +47,10 @@ class UploadResponse(BaseModel):
 
 
 class AnalyzeRequest(BaseModel):
-    upload_id: str
+    upload_id: str = Field(max_length=36)
     trim: TrimRange
+    throw_type: ThrowType
+    camera_perspective: CameraPerspective
 
 
 class ThrowPhase(BaseModel):
@@ -47,9 +63,10 @@ class ThrowPhase(BaseModel):
 class CritiqueResponse(BaseModel):
     overall_score: str
     summary: str
-    throw_type: Literal["backhand", "forehand", "unknown"]
+    throw_type: ThrowType
     phases: list[ThrowPhase]
     key_focus: str
+    camera_perspective: CameraPerspective
 
 
 class AnalyzeResponse(BaseModel):

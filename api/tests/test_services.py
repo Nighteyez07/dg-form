@@ -15,11 +15,24 @@ import pytest
 
 from models.schemas import CritiqueResponse
 from services.openai_client import analyze_frames
+import services.openai_client as _openai_client_module
 from services.video_pipeline import (
     assemble_annotated_clip,
     clip_video,
     extract_frames,
 )
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def reset_openai_singleton():
+    """Reset the cached OpenAI client before every test so patches take effect."""
+    _openai_client_module._openai_client = None
+    yield
+    _openai_client_module._openai_client = None
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -30,6 +43,7 @@ _VALID_CRITIQUE_JSON = json.dumps(
         "overall_score": "8/10",
         "summary": "Good form.",
         "throw_type": "backhand",
+        "camera_perspective": "side_facing",
         "phases": [],
         "key_focus": "Follow through",
     }
@@ -109,7 +123,7 @@ def test_extract_frames_returns_list():
 
 
 def test_extract_frames_caps_at_max_frames():
-    """With fps=1 every frame is a sample; 1000 reads must be capped at _MAX_FRAMES=150."""
+    """With fps=1 every frame is a sample; 1000 reads must be capped at _MAX_FRAMES=12."""
     with patch("services.video_pipeline.cv2") as mock_cv2:
         mock_cap = MagicMock()
         mock_cv2.VideoCapture.return_value = mock_cap
@@ -132,7 +146,7 @@ def test_extract_frames_caps_at_max_frames():
 
         result = extract_frames(Path("/tmp/clip.mp4"))
 
-        assert len(result) <= 150
+        assert len(result) <= 12
 
 
 # ---------------------------------------------------------------------------

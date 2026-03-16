@@ -22,6 +22,7 @@ def _make_critique(**kwargs) -> CritiqueResponse:
         "overall_score": "7/10",
         "summary": "Decent throw.",
         "throw_type": "unknown",
+        "camera_perspective": "unknown",
         "phases": [],
         "key_focus": "Follow through",
     }

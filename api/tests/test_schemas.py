@@ -52,6 +52,8 @@ def test_analyze_request_valid_round_trips() -> None:
     req = AnalyzeRequest(
         upload_id="c2a1b3d4-e5f6-7890-abcd-ef1234567890",
         trim=TrimRange(start_ms=0, end_ms=1000),
+        throw_type="backhand",
+        camera_perspective="front",
     )
     assert req.upload_id == "c2a1b3d4-e5f6-7890-abcd-ef1234567890"
     assert req.trim.start_ms == 0
@@ -67,6 +69,7 @@ def test_critique_response_valid_backhand() -> None:
         overall_score="8/10",
         summary="Solid throw with good mechanics.",
         throw_type="backhand",
+        camera_perspective="front",
         phases=[],
         key_focus="Follow through",
     )
@@ -78,7 +81,8 @@ def test_critique_response_invalid_throw_type_raises() -> None:
         CritiqueResponse(
             overall_score="7/10",
             summary="Decent form.",
-            throw_type="sidearm",  # not a valid Literal
+            throw_type="sidearm",  # not a valid enum value
+            camera_perspective="front",
             phases=[],
             key_focus="Hip rotation",
         )

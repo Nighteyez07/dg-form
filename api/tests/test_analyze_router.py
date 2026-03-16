@@ -12,6 +12,7 @@ Strategy
   call `.pop(…, None)`.
 """
 
+import json
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +22,18 @@ import pytest
 
 from routers.upload import _upload_registry
 from models.schemas import CritiqueResponse, ThrowPhase
+
+
+def _parse_sse_complete(text: str) -> dict:
+    """Extract and parse the data payload from the first 'complete' SSE event."""
+    for block in text.split("\n\n"):
+        lines = block.strip().splitlines()
+        event = next((ln[7:] for ln in lines if ln.startswith("event: ")), None)
+        if event == "complete":
+            data_line = next((ln[6:] for ln in lines if ln.startswith("data: ")), None)
+            if data_line:
+                return json.loads(data_line)  # type: ignore[no-any-return]
+    return {}
 
 # ---------------------------------------------------------------------------
 # Shared test data
@@ -33,6 +46,7 @@ _VALID_CRITIQUE = CritiqueResponse(
     overall_score="8/10",
     summary="Clean mechanics with strong hip rotation.",
     throw_type="backhand",
+    camera_perspective="side_facing",
     phases=[
         ThrowPhase(
             name="Release",
@@ -43,6 +57,9 @@ _VALID_CRITIQUE = CritiqueResponse(
     ],
     key_focus="Follow through",
 )
+
+# Common shot-context fields required by the updated AnalyzeRequest schema.
+_SHOT_CONTEXT = {"throw_type": "backhand", "camera_perspective": "side_facing"}
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +95,7 @@ def registry_entry(tmp_path: Path):
 async def test_analyze_invalid_uuid(async_client) -> None:
     response = await async_client.post(
         "/analyze",
-        json={"upload_id": "not-a-uuid", "trim": {"start_ms": 0, "end_ms": 2000}},
+        json={"upload_id": "not-a-uuid", "trim": {"start_ms": 0, "end_ms": 2000}, **_SHOT_CONTEXT},
     )
     assert response.status_code == 404
 
@@ -87,7 +104,7 @@ async def test_analyze_upload_not_found(async_client) -> None:
     valid_uuid = str(uuid.uuid4())  # real UUID, but not in the registry
     response = await async_client.post(
         "/analyze",
-        json={"upload_id": valid_uuid, "trim": {"start_ms": 0, "end_ms": 2000}},
+        json={"upload_id": valid_uuid, "trim": {"start_ms": 0, "end_ms": 2000}, **_SHOT_CONTEXT},
     )
     assert response.status_code == 404
 
@@ -97,7 +114,7 @@ async def test_analyze_invalid_trim_range(async_client, registry_entry) -> None:
     # end_ms < start_ms — TrimRange model_validator must reject this with 422.
     response = await async_client.post(
         "/analyze",
-        json={"upload_id": upload_id, "trim": {"start_ms": 5000, "end_ms": 1000}},
+        json={"upload_id": upload_id, "trim": {"start_ms": 5000, "end_ms": 1000}, **_SHOT_CONTEXT},
     )
     assert response.status_code == 422
 
@@ -117,13 +134,13 @@ async def test_analyze_services_called(async_client, registry_entry) -> None:
     ):
         response = await async_client.post(
             "/analyze",
-            json={"upload_id": upload_id, "trim": {"start_ms": 0, "end_ms": 2000}},
+            json={"upload_id": upload_id, "trim": {"start_ms": 0, "end_ms": 2000}, **_SHOT_CONTEXT},
         )
 
     assert response.status_code == 200
-    data = response.json()
-    assert "clip_id" in data
-    assert data["critique"]["throw_type"] == "backhand"
+    complete = _parse_sse_complete(response.text)
+    assert "clip_id" in complete
+    assert complete["critique"]["throw_type"] == "backhand"
 
 
 async def test_analyze_cleans_up_upload(async_client, registry_entry) -> None:
@@ -137,7 +154,7 @@ async def test_analyze_cleans_up_upload(async_client, registry_entry) -> None:
     ):
         response = await async_client.post(
             "/analyze",
-            json={"upload_id": upload_id, "trim": {"start_ms": 0, "end_ms": 2000}},
+            json={"upload_id": upload_id, "trim": {"start_ms": 0, "end_ms": 2000}, **_SHOT_CONTEXT},
         )
 
     assert response.status_code == 200

@@ -7,7 +7,26 @@ export const handlers = [
   }),
 
   http.post('/api/analyze', () => {
-    return HttpResponse.json(mockAnalyzeResponse, { status: 200 });
+    const encoder = new TextEncoder();
+    const completePayload = {
+      clip_id: mockAnalyzeResponse.clip_id,
+      critique: mockAnalyzeResponse.critique,
+    };
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode('event: queued\ndata: {"message":"Waiting for a slot"}\n\n')
+        );
+        controller.enqueue(
+          encoder.encode(`event: complete\ndata: ${JSON.stringify(completePayload)}\n\n`)
+        );
+        controller.close();
+      },
+    });
+    return new HttpResponse(stream, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    });
   }),
 
   http.get('/api/clip/:clip_id', () => {

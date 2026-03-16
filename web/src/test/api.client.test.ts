@@ -1,8 +1,16 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { uploadVideo, analyzeVideo, getClipUrl, ApiError } from '../api/client';
+import { uploadVideo, analyzeVideoStream, getClipUrl, ApiError } from '../api/client';
+import type { AnalyzeRequest, CompleteEvent } from '../types/api';
 import { server } from './mocks/server';
 import { mockUploadResponse, mockAnalyzeResponse } from './mocks/fixtures';
+
+const mockAnalyzeRequest: AnalyzeRequest = {
+  upload_id: mockUploadResponse.upload_id,
+  trim: mockUploadResponse.suggested_trim,
+  throw_type: 'backhand',
+  camera_perspective: 'side_facing',
+};
 
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
@@ -40,29 +48,34 @@ describe('uploadVideo', () => {
   });
 });
 
-describe('analyzeVideo', () => {
-  it('resolves with AnalyzeResponse on success', async () => {
-    const result = await analyzeVideo({
-      upload_id: mockUploadResponse.upload_id,
-      trim: mockUploadResponse.suggested_trim,
-    });
-    expect(result).toEqual(mockAnalyzeResponse);
+describe('analyzeVideoStream', () => {
+  it('calls onComplete with critique on success', async () => {
+    let completed: CompleteEvent | null = null;
+    await analyzeVideoStream(
+      mockAnalyzeRequest,
+      () => {},
+      (event) => { completed = event; },
+      (msg) => { throw new Error(msg); },
+    );
+    expect(completed).not.toBeNull();
+    expect(completed!.clip_id).toBe(mockAnalyzeResponse.clip_id);
+    expect(completed!.critique).toEqual(mockAnalyzeResponse.critique);
   });
 
-  it('throws ApiError on 404', async () => {
+  it('calls onError on 404', async () => {
     server.use(
       http.post('/api/analyze', () =>
         HttpResponse.json({ detail: 'Upload not found' }, { status: 404 })
       )
     );
-    await expect(
-      analyzeVideo({
-        upload_id: 'nonexistent-id',
-        trim: { start_ms: 0, end_ms: 1000 },
-      })
-    ).rejects.toSatisfy(
-      (err: unknown) => err instanceof ApiError && err.status === 404
+    let errorMsg = '';
+    await analyzeVideoStream(
+      { ...mockAnalyzeRequest, upload_id: 'nonexistent-id' },
+      () => {},
+      () => { throw new Error('should not complete'); },
+      (msg) => { errorMsg = msg; },
     );
+    expect(errorMsg).toMatch(/Upload not found/);
   });
 });
 

@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react';
-import type { UploadResponse, TrimRange, AnalyzeResponse } from '../types/api';
-import { analyzeVideo, ApiError } from '../api/client';
+import type {
+  UploadResponse,
+  AnalyzeResponse,
+  ThrowType,
+  CameraPerspective,
+  AnalyzeRequest,
+} from '../types/api';
+import { analyzeVideoStream } from '../api/client';
+import AnalysisProgress from './AnalysisProgress';
 
 interface TrimEditorProps {
   uploadData: UploadResponse;
@@ -11,7 +18,7 @@ interface TrimEditorProps {
 }
 
 function msToSeconds(ms: number): string {
-  return (ms / 1000).toFixed(1) + 's';
+  return (ms / 1000).toFixed(1) + ' seconds';
 }
 
 export default function TrimEditor({
@@ -28,6 +35,24 @@ export default function TrimEditor({
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [throwType, setThrowType] = useState<ThrowType | ''>('');
+  const [cameraPerspective, setCameraPerspective] = useState<CameraPerspective | ''>('');
+  const [currentStage, setCurrentStage] = useState<string | null>(null);
+  const [completedStages, setCompletedStages] = useState<string[]>([]);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const currentStageRef = useRef<string | null>(null);
+
+  // Move focus to the progress feed when analysis starts so keyboard / AT users
+  // aren't stranded on a newly-disabled button. (WCAG 2.4.3 Focus Order)
+  const progressRef = useRef<HTMLDivElement>(null);
+  const prevIsLoading = useRef<boolean>(false);
+  useEffect(() => {
+    if (isLoading && !prevIsLoading.current) {
+      // Small timeout ensures the progress section has mounted.
+      setTimeout(() => progressRef.current?.focus(), 0);
+    }
+    prevIsLoading.current = isLoading;
+  }, [isLoading]);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -48,21 +73,40 @@ export default function TrimEditor({
   };
 
   const handleAnalyze = async (): Promise<void> => {
+    if (throwType === '' || cameraPerspective === '') return;
     setError(null);
     setIsLoading(true);
-    try {
-      const trim: TrimRange = { start_ms: startMs, end_ms: endMs };
-      const data = await analyzeVideo({ upload_id: uploadData.upload_id, trim });
-      onConfirmed(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(`Analysis failed: ${err.message}`);
-      } else {
-        setError('Analysis failed. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    setCurrentStage(null);
+    setCompletedStages([]);
+    setStatusMessage('');
+    currentStageRef.current = null;
+
+    const req: AnalyzeRequest = {
+      upload_id: uploadData.upload_id,
+      trim: { start_ms: startMs, end_ms: endMs },
+      throw_type: throwType,
+      camera_perspective: cameraPerspective,
+    };
+
+    await analyzeVideoStream(
+      req,
+      (event) => {
+        if (currentStageRef.current !== null && currentStageRef.current !== event.stage) {
+          const prevStage = currentStageRef.current;
+          setCompletedStages(prev => [...prev, prevStage]);
+        }
+        currentStageRef.current = event.stage;
+        setCurrentStage(event.stage);
+        setStatusMessage(event.message);
+      },
+      (event) => {
+        onConfirmed({ clip_id: event.clip_id, critique: event.critique });
+      },
+      (message) => {
+        setError(`Analysis failed: ${message}`);
+        setIsLoading(false);
+      },
+    );
   };
 
   return (
@@ -99,7 +143,7 @@ export default function TrimEditor({
           value={startMs}
           onChange={handleStartChange}
           className="range-input"
-          aria-label="Trim start point"
+          aria-valuetext={msToSeconds(startMs)}
           disabled={isLoading}
         />
 
@@ -115,10 +159,56 @@ export default function TrimEditor({
           value={endMs}
           onChange={handleEndChange}
           className="range-input"
-          aria-label="Trim end point"
+          aria-valuetext={msToSeconds(endMs)}
           disabled={isLoading}
         />
       </div>
+
+      <fieldset className="shot-context">
+        <legend>Shot Context</legend>
+
+        <div className="shot-context-field">
+          <label htmlFor="throw-type">
+            Throw Type
+            <span aria-hidden="true"> *</span>
+            <span className="sr-only"> (required)</span>
+          </label>
+          <select
+            id="throw-type"
+            value={throwType}
+            onChange={e => setThrowType(e.target.value as ThrowType)}
+            disabled={isLoading}
+            required
+          >
+            <option value="" disabled>Select throw type…</option>
+            <option value="backhand">Backhand</option>
+            <option value="forehand">Forehand / Side throw</option>
+            <option value="unknown">I’m not sure</option>
+          </select>
+        </div>
+
+        <div className="shot-context-field">
+          <label htmlFor="camera-perspective">
+            Camera Perspective
+            <span aria-hidden="true"> *</span>
+            <span className="sr-only"> (required)</span>
+          </label>
+          <select
+            id="camera-perspective"
+            value={cameraPerspective}
+            onChange={e => setCameraPerspective(e.target.value as CameraPerspective)}
+            disabled={isLoading}
+            required
+          >
+            <option value="" disabled>Select camera perspective…</option>
+            <option value="front">Front-facing</option>
+            <option value="back">Back-facing</option>
+            <option value="side_facing">Side — facing camera</option>
+            <option value="side_away">Side — facing away</option>
+            <option value="unknown">Unknown / mixed</option>
+          </select>
+        </div>
+      </fieldset>
 
       {error !== null && (
         <p className="error-message" role="alert">
@@ -126,12 +216,27 @@ export default function TrimEditor({
         </p>
       )}
 
+      {isLoading && (
+        <div ref={progressRef} tabIndex={-1} aria-label="Analysis progress">
+          <AnalysisProgress
+            currentStage={currentStage}
+            completedStages={completedStages}
+            statusMessage={statusMessage}
+          />
+        </div>
+      )}
+
       <div className="trim-actions">
+        {(throwType === '' || cameraPerspective === '') && !isLoading && (
+          <p id="analyze-hint" className="hint-text">
+            Select a throw type and camera perspective above to continue.
+          </p>
+        )}
         <button
           className="btn btn-primary"
           onClick={() => { void handleAnalyze(); }}
-          disabled={isLoading}
-          aria-busy={isLoading}
+          disabled={isLoading || throwType === '' || cameraPerspective === ''}
+          aria-describedby={throwType === '' || cameraPerspective === '' ? 'analyze-hint' : undefined}
         >
           {isLoading ? (
             <>

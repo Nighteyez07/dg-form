@@ -13,6 +13,7 @@ export const mockAnalyzeResponse: AnalyzeResponse = {
     overall_score: '7/10',
     summary: 'Good form overall.',
     throw_type: 'backhand',
+    camera_perspective: 'side_facing',
     phases: [
       {
         name: 'Grip & Setup',
