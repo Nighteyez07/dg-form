@@ -27,14 +27,24 @@ AI-powered disc golf throw analysis. Upload a video of your throw, let the app a
 ### Prerequisites
 
 - Docker & Docker Compose
-- An OpenAI API key
+- An OpenAI API key with access to GPT-4o (see below)
+
+### Obtaining an OpenAI API key
+
+1. Go to [platform.openai.com](https://platform.openai.com) and sign in or create an account.
+2. In the top-right menu, click your profile → **Your profile**, then navigate to the [API keys](https://platform.openai.com/api-keys) page in the left sidebar.
+3. Click **Create new secret key**, give it a name (e.g. `dg-form`), and click **Create secret key**.
+4. Copy the key immediately — it is only shown once.
+5. Ensure your account has access to the **GPT-4o** model. New accounts may need to add a [payment method](https://platform.openai.com/account/billing) and have a positive credit balance before the API becomes active.
+
+> **Cost note:** Each analyze request sends ~10 JPEG frames to GPT-4o Vision. At current pricing this is roughly $0.01–$0.05 per critique.
 
 ### Quick start
 
 ```bash
 git clone https://github.com/Nighteyez07/dg-form.git
 cd dg-form
-cp .env.example .env          # add your OPENAI_API_KEY
+cp .env.example .env          # paste your OPENAI_API_KEY into .env
 docker compose up --build
 ```
 
