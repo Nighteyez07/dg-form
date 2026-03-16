@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "node -e \"const i=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));const t=i.toolName||'';const inp=JSON.stringify(i.toolInput||{});const isCommit=/git.*commit|run_in_terminal/.test(t)&&/git\\s+commit/.test(inp);if(!isCommit)process.exit(0);console.error('\\n⚠️  Pre-commit gate: Before committing, run the /pre-commit-review prompt to execute Security, Performance, and UX agent scans plus the test suite.\\n   Run: bash scripts/install-hooks.sh (first time) to enforce this automatically.\\n');process.exit(0);\"",
+        "windows": "node -e \"const i=JSON.parse(require('fs').readFileSync(0,'utf8'));const t=i.toolName||'';const inp=JSON.stringify(i.toolInput||{});const isCommit=/git.*commit|run_in_terminal/.test(t)&&/git\\\\s+commit/.test(inp);if(!isCommit)process.exit(0);console.error('\\n\\u26a0\\ufe0f  Pre-commit gate: Before committing, run the /pre-commit-review prompt to execute Security, Performance, and UX agent scans plus the test suite.\\n   Run: bash scripts/install-hooks.sh (first time) to enforce this automatically.\\n');process.exit(0);\"",
+        "timeout": 5
+      }
+    ]
+  }
+}

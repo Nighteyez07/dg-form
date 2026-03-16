@@ -40,6 +40,26 @@ docker compose up --build
 
 Then open [http://localhost:5173](http://localhost:5173).
 
+## Development Setup
+
+### Install the pre-commit hook
+After cloning, run once to enforce tests before every commit:
+```sh
+bash scripts/install-hooks.sh
+```
+
+### Run tests manually
+```sh
+# Backend (from api/)
+python -m pytest
+
+# Frontend (from web/)
+npm run test
+
+# With coverage report
+npm run test:coverage
+```
+
 ## Project Structure
 
 ```

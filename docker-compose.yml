@@ -1,0 +1,61 @@
+services:
+
+  # ── API service (FastAPI / Python 3.12) ──────────────────────────────────
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      # SECURITY: Binding to 127.0.0.1 here restricts direct access to the
+      # host loopback interface only. The `web` service reaches this via the
+      # internal Docker network (service name `api`), not through the host port.
+      # TODO: Remove the host port mapping entirely before production and rely
+      #       solely on the internal Docker network + the nginx reverse proxy.
+      - "127.0.0.1:8000:8000"
+    tmpfs:
+      # Videos are written here during processing. A tmpfs mount keeps all
+      # temporary data in RAM — nothing is persisted to the host filesystem,
+      # which satisfies the no-video-retention requirement.
+      # SECURITY: mode=0700 restricts the directory to the owning user
+      # (appuser) only, preventing other processes in the container from
+      # reading video files in flight. size=512m caps RAM usage to prevent
+      # a runaway upload flood from exhausting container memory.
+      - /tmp/dg-form:mode=0700,size=512m
+    environment:
+      # Consumed by the FastAPI application at startup. Values are sourced
+      # from a local .env file (see .env.example). Never commit .env.
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    healthcheck:
+      # The /health endpoint returns {"status": "ok"} and is used by the
+      # `web` service to wait until the API is ready before starting.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Web service (React SPA served by nginx) ───────────────────────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      # SECURITY: Binding to 127.0.0.1 restricts direct access to the host
+      # loopback interface only, consistent with the api service port binding.
+      # Map nginx's port 80 inside the container to 5173 on the host so that
+      # the dev-friendly URL http://localhost:5173 works out of the box.
+      - "127.0.0.1:5173:80"
+    depends_on:
+      api:
+        # Wait for the API healthcheck to pass before starting nginx; this
+        # prevents the SPA from serving a broken experience at boot time.
+        condition: service_healthy
+    restart: unless-stopped
+
+# NOTE: No named volumes are defined here. Uploaded video files live
+# exclusively in the API container's tmpfs mount and are never written to
+# a host volume or Docker-managed volume.
