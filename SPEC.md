@@ -110,9 +110,16 @@ what the system is doing rather than watching a blank spinner.
     "upload_id": "uuid",
     "duration_ms": 8400,
     "suggested_trim": { "start_ms": 1200, "end_ms": 4300 },
-    "low_confidence": false
+    "low_confidence": false,
+    "detected_throw_type": "backhand | forehand | unknown",
+    "throw_type_confidence": 0.87
   }
   ```
+  `detected_throw_type` is the result of the auto-classification pipeline (see
+  [Auto throw-type detection](#auto-throw-type-detection)). `throw_type_confidence`
+  is a float in `[0.0, 1.0]`; values below **0.70** cause `detected_throw_type` to be
+  set to `"unknown"` so the frontend leaves the field unselected rather than surfacing a
+  low-confidence guess.
 
 ### `POST /analyze`
 - **Content-Type**: `application/json`
@@ -184,6 +191,47 @@ Use **MediaPipe Pose** to track wrist/shoulder velocity frame-by-frame. The thro
 is identified as the window with peak angular velocity of the throwing arm, padded by
 ~0.5 s on each side. Fallback: if pose confidence is low, return the middle 40% of the
 video and flag `"low_confidence": true` so the UI can prompt the user to trim manually.
+
+### Auto throw-type detection
+Immediately after the throw segment boundaries are established, a second MediaPipe Pose
+pass over the detected throw window classifies the throw type before the upload response
+is returned. No extra round-trip is needed; the result is included in the `/upload`
+response alongside `suggested_trim`.
+
+**Algorithm**
+
+1. For each frame in the detected throw window, read the `x`-coordinate of the throwing
+   wrist (dominant hand is inferred from whichever wrist has higher frame-to-frame
+   velocity).
+2. Measure the **lateral displacement vector** of the wrist relative to the mid-shoulder
+   line (midpoint of left and right shoulder landmarks, projected onto the horizontal axis
+   in normalised coordinates).
+3. Compute the **net cross-body travel**: the signed sum of horizontal wrist movement
+   across the throw window.
+   - **Backhand**: wrist starts near the non-dominant hip and crosses the body toward
+     the opposite side — net travel is strongly **toward** the mid-shoulder line from
+     outside it (large positive cross-body delta).
+   - **Forehand / flick**: wrist starts close to the dominant hip and swings outward in
+     a pendulum arc — net travel is **away** from the mid-shoulder line toward the
+     throwing side (large negative cross-body delta).
+4. Apply a signed threshold: if `|delta| ≥ 0.25` (normalised units, empirically tuned),
+   classify as backhand or forehand. Confidence is derived from the ratio of
+   `|delta| / expected_max_delta` clamped to `[0.0, 1.0]`.
+5. If fewer than 10 high-confidence pose frames are available in the window, or if
+   `confidence < 0.70`, set `detected_throw_type` to `"unknown"` and
+   `throw_type_confidence` to the raw value (so the frontend can optionally surface a
+   "low confidence" hint).
+
+**Fallbacks**
+
+| Condition | Outcome |
+|---|---|
+| Pose confidence low throughout clip | `unknown`, raw confidence returned |
+| Only one wrist detected | Use that wrist; mark confidence ×0.8 |
+| Clip shorter than 10 frames | `unknown` |
+
+This runs synchronously inside the `/upload` handler (same `asyncio.to_thread` task as
+pose-based trim detection), adding negligible latency.
 
 ### Frame extraction
 Extract ~8–12 evenly-spaced frames from the confirmed clip. Fewer frames = lower API cost;
@@ -269,7 +317,13 @@ Before submitting the clip for analysis the user fills in two fields presented i
 
 ### UI behaviour
 - Both fields are **required** before the Analyze button is enabled.
-- Default selection for throw type: none (user must pick).
+- **Throw type auto-population**: if `detected_throw_type` in the upload response is not
+  `"unknown"` (i.e. `throw_type_confidence ≥ 0.70`), the throw type selector is
+  pre-populated with the detected value and a small **"Auto-detected"** badge is shown
+  inline. The user can change the selection at any time before clicking Analyze.
+- If `detected_throw_type` is `"unknown"`, the throw type selector starts unselected as
+  before, and an optional low-confidence hint may be displayed if `throw_type_confidence`
+  is present but below threshold.
 - Default selection for camera perspective: none (user must pick).
 - The fields appear below the trim sliders and above the action buttons in `TrimEditor`.
 - On small screens the two selectors stack vertically.
@@ -287,6 +341,14 @@ class CameraPerspective(str, Enum):
     side_facing  = "side_facing"
     side_away    = "side_away"
     unknown      = "unknown"
+
+class UploadResponse(BaseModel):
+    upload_id:              str
+    duration_ms:            int
+    suggested_trim:         TrimRange
+    low_confidence:         bool
+    detected_throw_type:    ThrowType
+    throw_type_confidence:  float          # [0.0, 1.0]
 
 class AnalyzeRequest(BaseModel):
     upload_id:          str
@@ -437,9 +499,9 @@ for the stateless MVP.
   context to the analyze endpoint.
 - **History / persistence**: Swap the in-memory temp store for blob storage (S3/Azure Blob)
   keyed by user ID once accounts are added.
-- **Auto throw-type detection**: Use MediaPipe Pose arm trajectory to auto-classify
-  backhand vs. forehand as a default selection in the shot context form, reducing user
-  friction while allowing override.
+- **Auto throw-type detection**: implemented — see [Auto throw-type detection](#auto-throw-type-detection).
+  Future extension: more granular classification (roller, tomahawk, hyzer vs. anhyzer,
+  putting style) once a larger set of labelled poses is available for threshold tuning.
 - **WebSocket upgrade**: The current SSE transport is one-way (server → client). If
   interactive mid-analysis controls are added (e.g. cancel button, re-trim), upgrade the
   transport to WebSocket (`/ws/analyze`).
