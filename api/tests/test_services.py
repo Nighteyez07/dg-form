@@ -222,3 +222,69 @@ def test_analyze_frames_valid_returns_critique():
 
         assert isinstance(result, CritiqueResponse)
         assert result.throw_type == "backhand"
+
+
+# ---------------------------------------------------------------------------
+# pose_detection — _classify_from_observations
+# ---------------------------------------------------------------------------
+
+from services.pose_detection import _classify_from_observations
+
+
+def _make_obs(
+    left_wrist_x: float,
+    right_wrist_x: float,
+    mid_shoulder_x: float,
+) -> tuple[float, float, float]:
+    return (left_wrist_x, right_wrist_x, mid_shoulder_x)
+
+
+def _backhand_obs(n: int = 15) -> list[tuple[float, float, float]]:
+    """
+    Simulate a right-handed backhand: the right wrist (index 1) starts far left of
+    mid-shoulder and crosses to the right (positive delta).
+    Mid-shoulder is fixed at 0.5 throughout.
+    """
+    obs = []
+    for i in range(n):
+        # Right wrist moves from 0.1 → 0.8
+        right_x = 0.1 + (0.7 * i / (n - 1))
+        obs.append(_make_obs(0.5, right_x, 0.5))
+    return obs
+
+
+def _forehand_obs(n: int = 15) -> list[tuple[float, float, float]]:
+    """
+    Simulate a forehand: the right wrist swings from near center outward (negative delta).
+    """
+    obs = []
+    for i in range(n):
+        # Right wrist moves from 0.5 → 0.1 (swings away from center)
+        right_x = 0.5 - (0.4 * i / (n - 1))
+        obs.append(_make_obs(0.5, right_x, 0.5))
+    return obs
+
+
+def test_classify_backhand_detected():
+    result = _classify_from_observations(_backhand_obs())
+    assert result["detected_throw_type"] == "backhand"
+    assert result["throw_type_confidence"] >= 0.70
+
+
+def test_classify_forehand_detected():
+    result = _classify_from_observations(_forehand_obs())
+    assert result["detected_throw_type"] == "forehand"
+    assert result["throw_type_confidence"] >= 0.70
+
+
+def test_classify_too_few_frames_returns_unknown():
+    # Fewer than _MIN_POSE_FRAMES (10) → always unknown
+    result = _classify_from_observations(_backhand_obs(n=5))
+    assert result["detected_throw_type"] == "unknown"
+
+
+def test_classify_small_delta_returns_unknown():
+    # Wrist barely moves relative to mid-shoulder (delta ≈ 0.02, below 0.25 threshold)
+    obs = [_make_obs(0.51 + 0.001 * i, 0.49 - 0.001 * i, 0.5) for i in range(15)]
+    result = _classify_from_observations(obs)
+    assert result["detected_throw_type"] == "unknown"

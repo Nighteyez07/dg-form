@@ -35,7 +35,12 @@ export default function TrimEditor({
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [throwType, setThrowType] = useState<ThrowType | ''>('');
+  const autoDetected =
+    uploadData.detected_throw_type !== 'unknown' &&
+    uploadData.throw_type_confidence >= 0.70;
+  const [throwType, setThrowType] = useState<ThrowType | ''>(
+    autoDetected ? uploadData.detected_throw_type : ''
+  );
   const [cameraPerspective, setCameraPerspective] = useState<CameraPerspective | ''>('');
   const [currentStage, setCurrentStage] = useState<string | null>(null);
   const [completedStages, setCompletedStages] = useState<string[]>([]);
@@ -172,6 +177,15 @@ export default function TrimEditor({
             Throw Type
             <span aria-hidden="true"> *</span>
             <span className="sr-only"> (required)</span>
+            {autoDetected && throwType === uploadData.detected_throw_type && (
+              <span
+                id="throw-type-auto-desc"
+                className="auto-detected-badge"
+                aria-hidden="true"
+              >
+                Auto-detected
+              </span>
+            )}
           </label>
           <select
             id="throw-type"
@@ -179,6 +193,11 @@ export default function TrimEditor({
             onChange={e => setThrowType(e.target.value as ThrowType)}
             disabled={isLoading}
             required
+            aria-describedby={
+              autoDetected && throwType === uploadData.detected_throw_type
+                ? 'throw-type-auto-desc'
+                : undefined
+            }
           >
             <option value="" disabled>Select throw type…</option>
             <option value="backhand">Backhand</option>
@@ -229,7 +248,11 @@ export default function TrimEditor({
       <div className="trim-actions">
         {(throwType === '' || cameraPerspective === '') && !isLoading && (
           <p id="analyze-hint" className="hint-text">
-            Select a throw type and camera perspective above to continue.
+            {throwType === '' && cameraPerspective === ''
+              ? 'Select a throw type and camera perspective above to continue.'
+              : throwType === ''
+                ? 'Select a throw type above to continue.'
+                : 'Select a camera perspective above to continue.'}
           </p>
         )}
         <button
