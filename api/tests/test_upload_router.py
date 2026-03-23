@@ -168,7 +168,7 @@ async def test_upload_returns_detected_throw_type(async_client) -> None:
     assert data["throw_type_confidence"] == pytest.approx(0.85)
 
 
-async def test_upload_unknown_throw_type_when_low_confidence(async_client) -> None:
+async def test_upload_unknown_throw_type_when_low_throw_type_confidence(async_client) -> None:
     with patch(
         "services.pose_detection.detect_throw_segment",
         return_value=_DETECT_RESULT_UNKNOWN_THROW,
