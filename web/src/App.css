@@ -221,6 +221,79 @@ body {
   font-size: 0.9rem;
 }
 
+/* ── Shot context ───────────────────────────────────────────── */
+.shot-context {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.shot-context legend {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  padding: 0 0.25rem;
+}
+
+.shot-context-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.75rem;
+}
+
+.shot-context-field label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.shot-context-field select {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: #ffffff;
+  color: #111827;
+  cursor: pointer;
+}
+
+.shot-context-field select:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.shot-context-field select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auto-detected-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1d4ed8;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 9999px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.hint-text {
+  width: 100%;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
 /* ── TrimEditor ─────────────────────────────────────────────── */
 .trim-editor {
   display: flex;

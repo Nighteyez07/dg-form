@@ -39,6 +39,12 @@ _DETECT_RESULT = {
 
 _DETECT_RESULT_LOW_CONF = {**_DETECT_RESULT, "low_confidence": True}
 
+_DETECT_RESULT_UNKNOWN_THROW = {
+    **_DETECT_RESULT,
+    "detected_throw_type": "unknown",
+    "throw_type_confidence": 0.45,
+}
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -146,4 +152,17 @@ async def test_upload_low_confidence(async_client) -> None:
     assert response.json()["low_confidence"] is True
 
 
+async def test_upload_unknown_throw_type_when_low_throw_type_confidence(async_client) -> None:
+    with patch(
+        "services.pose_detection.detect_throw_segment",
+        return_value=_DETECT_RESULT_UNKNOWN_THROW,
+    ):
+        response = await async_client.post(
+            "/upload",
+            files={"video": ("throw.mp4", _VALID_MP4, "video/mp4")},
+        )
 
+    assert response.status_code == 200
+    data = response.json()
+    assert data["detected_throw_type"] == "unknown"
+    assert data["throw_type_confidence"] == pytest.approx(0.45)

@@ -38,10 +38,11 @@ export default function TrimEditor({
   // Pre-populate from auto-detection when confidence is sufficient.
   // Initialized directly so the value is present on first render without a
   // deferred effect (uploadData is immutable for the lifetime of this mount).
+  const autoDetected =
+    uploadData.detected_throw_type !== 'unknown' &&
+    uploadData.throw_type_confidence >= 0.70;
   const [throwType, setThrowType] = useState<ThrowType | ''>(
-    uploadData.detected_throw_type !== 'unknown' && uploadData.throw_type_confidence >= 0.70
-      ? uploadData.detected_throw_type
-      : ''
+    autoDetected ? uploadData.detected_throw_type : ''
   );
   const [cameraPerspective, setCameraPerspective] = useState<CameraPerspective | ''>('');
   const [currentStage, setCurrentStage] = useState<string | null>(null);
@@ -179,12 +180,14 @@ export default function TrimEditor({
             Throw Type
             <span aria-hidden="true"> *</span>
             <span className="sr-only"> (required)</span>
-            {uploadData.detected_throw_type !== 'unknown' &&
-              uploadData.throw_type_confidence >= 0.70 && (
-                <span className="auto-detected-badge">
-                  Auto-detected
-                </span>
-              )}
+            {autoDetected && throwType === uploadData.detected_throw_type && (
+              <span
+                id="throw-type-auto-desc"
+                className="auto-detected-badge"
+              >
+                Auto-detected
+              </span>
+            )}
           </label>
           {uploadData.detected_throw_type === 'unknown' &&
             uploadData.throw_type_confidence > 0 &&
@@ -200,11 +203,13 @@ export default function TrimEditor({
             disabled={isLoading}
             required
             aria-describedby={
-              uploadData.detected_throw_type === 'unknown' &&
-              uploadData.throw_type_confidence > 0 &&
-              uploadData.throw_type_confidence < 0.70
-                ? 'throw-type-confidence-hint'
-                : undefined
+              autoDetected && throwType === uploadData.detected_throw_type
+                ? 'throw-type-auto-desc'
+                : uploadData.detected_throw_type === 'unknown' &&
+                  uploadData.throw_type_confidence > 0 &&
+                  uploadData.throw_type_confidence < 0.70
+                    ? 'throw-type-confidence-hint'
+                    : undefined
             }
           >
             <option value="" disabled>Select throw type…</option>
@@ -256,7 +261,11 @@ export default function TrimEditor({
       <div className="trim-actions">
         {(throwType === '' || cameraPerspective === '') && !isLoading && (
           <p id="analyze-hint" className="hint-text">
-            Select a throw type and camera perspective above to continue.
+            {throwType === '' && cameraPerspective === ''
+              ? 'Select a throw type and camera perspective above to continue.'
+              : throwType === ''
+                ? 'Select a throw type above to continue.'
+                : 'Select a camera perspective above to continue.'}
           </p>
         )}
         <button

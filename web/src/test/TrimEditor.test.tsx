@@ -167,4 +167,51 @@ describe('TrimEditor', () => {
     expect(alert).toBeInTheDocument();
     expect(alert).toHaveTextContent(/Analysis failed/i);
   });
+
+  it('pre-populates throw type from detected_throw_type when confidence >= 0.70', () => {
+    render(
+      <TrimEditor
+        uploadData={{ ...mockUploadResponse, detected_throw_type: 'forehand', throw_type_confidence: 0.80 }}
+        file={makeFile()}
+        onConfirmed={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+
+    const select = screen.getByLabelText(/throw type/i) as HTMLSelectElement;
+    expect(select.value).toBe('forehand');
+    expect(screen.getByText(/Auto-detected/i)).toBeInTheDocument();
+  });
+
+  it('does not pre-populate throw type when detected_throw_type is unknown', () => {
+    render(
+      <TrimEditor
+        uploadData={{ ...mockUploadResponse, detected_throw_type: 'unknown', throw_type_confidence: 0.45 }}
+        file={makeFile()}
+        onConfirmed={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+
+    const select = screen.getByLabelText(/throw type/i) as HTMLSelectElement;
+    expect(select.value).toBe('');
+    expect(screen.queryByText(/Auto-detected/i)).toBeNull();
+  });
+
+  it('hides Auto-detected badge after user changes the throw type', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TrimEditor
+        uploadData={{ ...mockUploadResponse, detected_throw_type: 'backhand', throw_type_confidence: 0.85 }}
+        file={makeFile()}
+        onConfirmed={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Auto-detected/i)).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText(/throw type/i), 'forehand');
+    expect(screen.queryByText(/Auto-detected/i)).toBeNull();
+  });
 });

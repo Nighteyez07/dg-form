@@ -222,3 +222,4 @@ def test_analyze_frames_valid_returns_critique():
 
         assert isinstance(result, CritiqueResponse)
         assert result.throw_type == "backhand"
+
