@@ -32,7 +32,8 @@ FROM python:3.12-slim AS final
 #   PYTHONUNBUFFERED        – force stdout/stderr to be unbuffered so logs are
 #                             emitted immediately without manual flush() calls.
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    MPLCONFIGDIR=/tmp/matplotlib-cache
 
 WORKDIR /app
 
@@ -52,10 +53,25 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application source code.
 COPY . .
 
+# Pre-seed the MediaPipe Pose model so it is present before we drop privileges.
+# Running this as root (build stage) ensures the download can write into site-packages.
+RUN python -c "\
+import mediapipe.python.solutions.pose as _p; \
+_inst = _p.Pose(static_image_mode=True, model_complexity=0); \
+_inst.close()" 2>/dev/null || true
+
 # SECURITY: Run as a non-root user to limit blast radius if the process is
 # compromised. A dedicated system account (no home dir, no login shell) is
 # the minimal-privilege choice for a container service.
-RUN groupadd --system appuser && useradd --system --gid appuser appuser
+RUN groupadd --system appuser && useradd --system --gid appuser --create-home appuser
+
+# Ensure the Pose Lite model file is writable by appuser so MediaPipe can
+# download it at first use if the build-time pre-seed above failed (e.g. an
+# offline/air-gapped build).  Only this one .tflite file is affected;
+# the rest of site-packages stays root-owned and therefore read-only at runtime.
+RUN mkdir -p /usr/local/lib/python3.12/site-packages/mediapipe/modules/pose_landmark \
+    && touch /usr/local/lib/python3.12/site-packages/mediapipe/modules/pose_landmark/pose_landmark_lite.tflite \
+    && chown appuser:appuser /usr/local/lib/python3.12/site-packages/mediapipe/modules/pose_landmark/pose_landmark_lite.tflite
 
 # Create the tmpfs mount-point directory and hand ownership to appuser so
 # the running process can write temp video files there.

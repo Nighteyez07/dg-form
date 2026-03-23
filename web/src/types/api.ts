@@ -18,7 +18,7 @@ export interface UploadResponse {
   suggested_trim: SuggestedTrim;
   low_confidence: boolean;
   detected_throw_type: ThrowType;
-  throw_type_confidence: number;
+  throw_type_confidence: number;  // [0.0, 1.0]
 }
 
 export interface TrimRequest {

@@ -6,7 +6,7 @@ export const mockUploadResponse: UploadResponse = {
   suggested_trim: { start_ms: 1000, end_ms: 4000 },
   low_confidence: false,
   detected_throw_type: 'backhand',
-  throw_type_confidence: 0.85,
+  throw_type_confidence: 0.87,
 };
 
 export const mockAnalyzeResponse: AnalyzeResponse = {

@@ -35,6 +35,9 @@ export default function TrimEditor({
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Pre-populate from auto-detection when confidence is sufficient.
+  // Initialized directly so the value is present on first render without a
+  // deferred effect (uploadData is immutable for the lifetime of this mount).
   const autoDetected =
     uploadData.detected_throw_type !== 'unknown' &&
     uploadData.throw_type_confidence >= 0.70;
@@ -186,6 +189,13 @@ export default function TrimEditor({
               </span>
             )}
           </label>
+          {uploadData.detected_throw_type === 'unknown' &&
+            uploadData.throw_type_confidence > 0 &&
+            uploadData.throw_type_confidence < 0.70 && (
+              <p className="hint-text" id="throw-type-confidence-hint">
+                Auto-detection was low confidence — please confirm your throw type.
+              </p>
+            )}
           <select
             id="throw-type"
             value={throwType}
@@ -195,7 +205,11 @@ export default function TrimEditor({
             aria-describedby={
               autoDetected && throwType === uploadData.detected_throw_type
                 ? 'throw-type-auto-desc'
-                : undefined
+                : uploadData.detected_throw_type === 'unknown' &&
+                  uploadData.throw_type_confidence > 0 &&
+                  uploadData.throw_type_confidence < 0.70
+                    ? 'throw-type-confidence-hint'
+                    : undefined
             }
           >
             <option value="" disabled>Select throw type…</option>
