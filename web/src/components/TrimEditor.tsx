@@ -181,7 +181,6 @@ export default function TrimEditor({
               <span
                 id="throw-type-auto-desc"
                 className="auto-detected-badge"
-                aria-hidden="true"
               >
                 Auto-detected
               </span>
