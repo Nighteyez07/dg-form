@@ -44,6 +44,8 @@ class UploadResponse(BaseModel):
     duration_ms: int
     suggested_trim: SuggestedTrim
     low_confidence: bool
+    detected_throw_type: ThrowType
+    throw_type_confidence: float = Field(ge=0.0, le=1.0)
 
 
 class AnalyzeRequest(BaseModel):
