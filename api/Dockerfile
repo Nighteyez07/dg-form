@@ -32,7 +32,8 @@ FROM python:3.12-slim AS final
 #   PYTHONUNBUFFERED        – force stdout/stderr to be unbuffered so logs are
 #                             emitted immediately without manual flush() calls.
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    MPLCONFIGDIR=/tmp/matplotlib-cache
 
 WORKDIR /app
 
@@ -52,10 +53,20 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application source code.
 COPY . .
 
+# Pre-seed the MediaPipe Pose model so it is present before we drop privileges.
+# Running this as root (build stage) ensures the download can write into site-packages.
+RUN python -c "\
+import mediapipe.python.solutions.pose as _p; \
+_inst = _p.Pose(static_image_mode=True, model_complexity=0); \
+_inst.close()" 2>/dev/null || true
+
 # SECURITY: Run as a non-root user to limit blast radius if the process is
 # compromised. A dedicated system account (no home dir, no login shell) is
 # the minimal-privilege choice for a container service.
-RUN groupadd --system appuser && useradd --system --gid appuser appuser
+RUN groupadd --system appuser && useradd --system --gid appuser --create-home appuser
+
+# Allow appuser to write the MediaPipe model cache if it was not pre-seeded.
+RUN chown -R appuser:appuser /usr/local/lib/python3.12/site-packages/mediapipe/modules
 
 # Create the tmpfs mount-point directory and hand ownership to appuser so
 # the running process can write temp video files there.
