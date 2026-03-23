@@ -68,7 +68,8 @@ def detect_throw_segment(video_path: Path) -> dict:
     start_ms = 0
     end_ms = duration_ms
 
-    # Pass fps so _classify_throw_type does not need to re-open the file.
+    # Pass fps so _classify_throw_type does not need to re-read FPS/metadata from the file
+    # (it may still open the video again for frame sampling).
     throw_type_result = _classify_throw_type(video_path, start_ms, end_ms, fps)
 
     return {
