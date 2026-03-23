@@ -30,6 +30,16 @@ export default function TrimEditor({
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { headingRef.current?.focus(); }, []);
 
+  // Pre-populate throw type from auto-detection when confidence is sufficient.
+  useEffect(() => {
+    if (
+      uploadData.detected_throw_type !== 'unknown' &&
+      uploadData.throw_type_confidence >= 0.70
+    ) {
+      setThrowType(uploadData.detected_throw_type);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [startMs, setStartMs] = useState<number>(uploadData.suggested_trim.start_ms);
   const [endMs, setEndMs] = useState<number>(uploadData.suggested_trim.end_ms);
   const [videoSrc, setVideoSrc] = useState<string>('');
@@ -172,13 +182,33 @@ export default function TrimEditor({
             Throw Type
             <span aria-hidden="true"> *</span>
             <span className="sr-only"> (required)</span>
+            {uploadData.detected_throw_type !== 'unknown' &&
+              uploadData.throw_type_confidence >= 0.70 && (
+                <span className="auto-detected-badge">
+                  Auto-detected
+                </span>
+              )}
           </label>
+          {uploadData.detected_throw_type === 'unknown' &&
+            uploadData.throw_type_confidence > 0 &&
+            uploadData.throw_type_confidence < 0.70 && (
+              <p className="hint-text" id="throw-type-confidence-hint">
+                Auto-detection was low confidence — please confirm your throw type.
+              </p>
+            )}
           <select
             id="throw-type"
             value={throwType}
             onChange={e => setThrowType(e.target.value as ThrowType)}
             disabled={isLoading}
             required
+            aria-describedby={
+              uploadData.detected_throw_type === 'unknown' &&
+              uploadData.throw_type_confidence > 0 &&
+              uploadData.throw_type_confidence < 0.70
+                ? 'throw-type-confidence-hint'
+                : undefined
+            }
           >
             <option value="" disabled>Select throw type…</option>
             <option value="backhand">Backhand</option>

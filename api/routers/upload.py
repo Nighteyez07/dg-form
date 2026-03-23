@@ -135,6 +135,8 @@ async def upload_video(video: UploadFile) -> UploadResponse:
                 end_ms=result["end_ms"],
             ),
             low_confidence=result["low_confidence"],
+            detected_throw_type=result["detected_throw_type"],
+            throw_type_confidence=result["throw_type_confidence"],
         )
 
     finally:

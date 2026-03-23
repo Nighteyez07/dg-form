@@ -62,6 +62,44 @@ describe('TrimEditor', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('pre-populates throw type when auto-detection confidence is high', () => {
+    render(
+      <TrimEditor
+        uploadData={{
+          ...mockUploadResponse,
+          detected_throw_type: 'forehand',
+          throw_type_confidence: 0.85,
+        }}
+        file={makeFile()}
+        onConfirmed={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+
+    const select = screen.getByLabelText(/throw type/i) as HTMLSelectElement;
+    expect(select.value).toBe('forehand');
+    expect(screen.getByText(/auto-detected/i)).toBeInTheDocument();
+  });
+
+  it('does not pre-populate throw type when confidence is below threshold', () => {
+    render(
+      <TrimEditor
+        uploadData={{
+          ...mockUploadResponse,
+          detected_throw_type: 'unknown',
+          throw_type_confidence: 0.50,
+        }}
+        file={makeFile()}
+        onConfirmed={vi.fn()}
+        onReset={vi.fn()}
+      />
+    );
+
+    const select = screen.getByLabelText(/throw type/i) as HTMLSelectElement;
+    expect(select.value).toBe('');
+    expect(screen.getByText(/low confidence/i)).toBeInTheDocument();
+  });
+
   it('calls onReset when cancel button clicked', async () => {
     const user = userEvent.setup();
     const onReset = vi.fn();

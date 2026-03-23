@@ -33,6 +33,8 @@ _DETECT_RESULT = {
     "end_ms": 3000,
     "duration_ms": 5000,
     "low_confidence": False,
+    "detected_throw_type": "backhand",
+    "throw_type_confidence": 0.82,
 }
 
 _DETECT_RESULT_LOW_CONF = {**_DETECT_RESULT, "low_confidence": True}
@@ -140,3 +142,19 @@ async def test_upload_low_confidence(async_client) -> None:
 
     assert response.status_code == 200
     assert response.json()["low_confidence"] is True
+
+
+async def test_upload_returns_detected_throw_type(async_client) -> None:
+    with patch(
+        "services.pose_detection.detect_throw_segment",
+        return_value=_DETECT_RESULT,
+    ):
+        response = await async_client.post(
+            "/upload",
+            files={"video": ("throw.mp4", _VALID_MP4, "video/mp4")},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["detected_throw_type"] == "backhand"
+    assert 0.0 <= data["throw_type_confidence"] <= 1.0
