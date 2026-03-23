@@ -189,8 +189,8 @@ def _classify_from_observations(
     wrist_idx = 0 if left_disp >= right_disp else 1
 
     # Wrist offset from mid-shoulder center at first and last high-confidence frames.
-    first_wrist_x, _, first_mid_x = observations[0][wrist_idx], None, observations[0][2]
     first_wrist_x = observations[0][wrist_idx]
+    first_mid_x = observations[0][2]
     first_offset = first_wrist_x - first_mid_x
 
     last_wrist_x = observations[-1][wrist_idx]
