@@ -208,7 +208,7 @@ class TestMiddle40:
     def test_zero_duration(self):
         start, end, low_conf = _middle_40(0)
         assert start == 0
-        assert end >= 1  # max(margin+1, …) prevents start == end
+        assert end == 0  # both clamped to 0 for a zero-duration video
         assert low_conf is True
 
     def test_small_duration(self):
@@ -411,7 +411,7 @@ class TestMakeFallback:
         result = _make_fallback(0)
         assert result["low_confidence"] is True
         assert result["start_ms"] == 0
-        assert result["end_ms"] >= 1
+        assert result["end_ms"] == 0  # _middle_40 clamps both to 0 for zero-duration
 
 
 # ---------------------------------------------------------------------------
@@ -585,18 +585,20 @@ class TestDetectThrowSegment:
         assert result["throw_type_confidence"] == 0.0
 
     def test_empty_frame_data_returns_fallback(self):
-        """When no frames are decoded, return a low-confidence fallback."""
+        """When no frames are decoded, return a low-confidence fallback with real duration."""
         mock_mp = self._make_mock_mp()
 
         with patch.dict(sys.modules, {"mediapipe": mock_mp}):
             with patch(
                 "services.pose_detection._run_pose_pass",
-                return_value=([], 30.0, 0, 0),
+                return_value=([], 30.0, 300, 10_000),
             ):
                 result = detect_throw_segment(Path("/tmp/test.mp4"))
 
         assert result["low_confidence"] is True
-        assert result["duration_ms"] == 0
+        assert result["duration_ms"] == 10_000
+        assert result["start_ms"] == 3_000
+        assert result["end_ms"] == 7_000
 
     def test_normal_backhand_path_returns_correct_keys_and_type(self):
         """Full happy-path: synthetic backhand frames → 'backhand'."""

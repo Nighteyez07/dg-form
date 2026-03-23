@@ -30,22 +30,19 @@ export default function TrimEditor({
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { headingRef.current?.focus(); }, []);
 
-  // Pre-populate throw type from auto-detection when confidence is sufficient.
-  useEffect(() => {
-    if (
-      uploadData.detected_throw_type !== 'unknown' &&
-      uploadData.throw_type_confidence >= 0.70
-    ) {
-      setThrowType(uploadData.detected_throw_type);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const [startMs, setStartMs] = useState<number>(uploadData.suggested_trim.start_ms);
   const [endMs, setEndMs] = useState<number>(uploadData.suggested_trim.end_ms);
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [throwType, setThrowType] = useState<ThrowType | ''>('');
+  // Pre-populate from auto-detection when confidence is sufficient.
+  // Initialized directly so the value is present on first render without a
+  // deferred effect (uploadData is immutable for the lifetime of this mount).
+  const [throwType, setThrowType] = useState<ThrowType | ''>(
+    uploadData.detected_throw_type !== 'unknown' && uploadData.throw_type_confidence >= 0.70
+      ? uploadData.detected_throw_type
+      : ''
+  );
   const [cameraPerspective, setCameraPerspective] = useState<CameraPerspective | ''>('');
   const [currentStage, setCurrentStage] = useState<string | null>(null);
   const [completedStages, setCompletedStages] = useState<string[]>([]);

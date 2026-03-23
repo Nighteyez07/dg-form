@@ -65,8 +65,13 @@ _inst.close()" 2>/dev/null || true
 # the minimal-privilege choice for a container service.
 RUN groupadd --system appuser && useradd --system --gid appuser --create-home appuser
 
-# Allow appuser to write the MediaPipe model cache if it was not pre-seeded.
-RUN chown -R appuser:appuser /usr/local/lib/python3.12/site-packages/mediapipe/modules
+# Ensure the Pose Lite model file is writable by appuser so MediaPipe can
+# download it at first use if the build-time pre-seed above failed (e.g. an
+# offline/air-gapped build).  Only this one .tflite file is affected;
+# the rest of site-packages stays root-owned and therefore read-only at runtime.
+RUN mkdir -p /usr/local/lib/python3.12/site-packages/mediapipe/modules/pose_landmark \
+    && touch /usr/local/lib/python3.12/site-packages/mediapipe/modules/pose_landmark/pose_landmark_lite.tflite \
+    && chown appuser:appuser /usr/local/lib/python3.12/site-packages/mediapipe/modules/pose_landmark/pose_landmark_lite.tflite
 
 # Create the tmpfs mount-point directory and hand ownership to appuser so
 # the running process can write temp video files there.

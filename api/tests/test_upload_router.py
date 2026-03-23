@@ -74,6 +74,8 @@ async def test_upload_valid_mp4(async_client) -> None:
     assert data["suggested_trim"]["start_ms"] == 1000
     assert data["suggested_trim"]["end_ms"] == 3000
     assert data["low_confidence"] is False
+    assert data["detected_throw_type"] == "backhand"
+    assert data["throw_type_confidence"] == 0.82
 
 
 async def test_upload_invalid_mime(async_client) -> None:
@@ -144,17 +146,4 @@ async def test_upload_low_confidence(async_client) -> None:
     assert response.json()["low_confidence"] is True
 
 
-async def test_upload_returns_detected_throw_type(async_client) -> None:
-    with patch(
-        "services.pose_detection.detect_throw_segment",
-        return_value=_DETECT_RESULT,
-    ):
-        response = await async_client.post(
-            "/upload",
-            files={"video": ("throw.mp4", _VALID_MP4, "video/mp4")},
-        )
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["detected_throw_type"] == "backhand"
-    assert 0.0 <= data["throw_type_confidence"] <= 1.0

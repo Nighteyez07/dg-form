@@ -269,8 +269,10 @@ def _rolling_mean(values: list[float], window: int) -> list[float]:
 
 def _middle_40(duration_ms: int) -> tuple[int, int, bool]:
     """Return the middle 40 % of the video as a low-confidence fallback."""
+    if duration_ms <= 0:
+        return 0, 0, True
     margin = int(duration_ms * 0.30)
-    end = max(margin + 1, duration_ms - margin)
+    end = duration_ms - margin
     return margin, end, True
 
 
@@ -527,7 +529,7 @@ def detect_throw_segment(video_path: Path) -> dict:
 
     if not frame_data:
         logger.warning("No frames could be read from %s", video_path)
-        return _make_fallback(0)
+        return _make_fallback(duration_ms)
 
     # --- Algorithm 1: auto-trim ---
     vels, left_total, right_total = _wrist_velocities(frame_data)
